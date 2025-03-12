@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # Serviço principal da aplicação Laravel
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: erpninja-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - erpninja-network
+    depends_on:
+      - db
+      - redis
+
+  # Servidor web Nginx
+  web:
+    image: nginx:1.25-alpine
+    container_name: erpninja-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+    networks:
+      - erpninja-network
+    depends_on:
+      - app
+
+  # Banco de dados PostgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: erpninja-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-erpninja}
+      POSTGRES_USER: ${DB_USERNAME:-erpninja}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - erpninja-db-data:/var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    networks:
+      - erpninja-network
+
+  # Redis para cache e filas
+  redis:
+    image: redis:7-alpine
+    container_name: erpninja-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:-secret}"
+    volumes:
+      - erpninja-redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - erpninja-network
+
+  # Serviço para processamento de filas
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: erpninja-queue
+    restart: unless-stopped
+    command: php artisan queue:work --tries=3 --timeout=90
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - erpninja-network
+    depends_on:
+      - app
+      - db
+      - redis
+
+  # Serviço para agendamento de tarefas
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: erpninja-scheduler
+    restart: unless-stopped
+    command: php artisan schedule:work
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - erpninja-network
+    depends_on:
+      - app
+      - db
+      - redis
+
+  # Serviço para desenvolvimento frontend (opcional)
+  node:
+    image: node:20-alpine
+    container_name: erpninja-node
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - erpninja-network
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - app
+
+networks:
+  erpninja-network:
+    driver: bridge
+
+volumes:
+  erpninja-db-data:
+    driver: local
+  erpninja-redis-data:
+    driver: local
