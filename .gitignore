@@ -1,0 +1,54 @@
+/node_modules
+/public/hot
+/public/storage
+/public/build
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de log
+*.log
+
+# Arquivos temporários
+*.tmp
+*.swp
+*.swo
+
+# Arquivos de cache
+.phpunit.cache/
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+
+# Arquivos de build
+/public/css
+/public/js
+/public/mix-manifest.json
+
+# Arquivos de dependências
+composer.phar
+package-lock.json
+yarn.lock
+
+# Arquivos de configuração local
+docker/nginx/ssl/*
+!docker/nginx/ssl/.gitkeep
+
+# Arquivos de backup
+*.bak
+*.backup
+*~
